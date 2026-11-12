@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hisobchi Pro — Zamonaviy Buxgalteriya Dasturi</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js Grafiklar uchun -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome Ikonkalar -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        navy: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        emerald: {
+                            500: '#10b981',
+                            600: '#059669',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Yuqori Navigatsiya Paneli (Navbar) -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Brend Logotipi -->
+                <div class="flex items-center space-x-3">
+                    <div class="bg-emerald-500 text-white p-2 rounded-xl shadow-md">
+                        <i class="fa-solid fa-calculator text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-xl tracking-tight">Hisobchi<span class="text-emerald-400">Pro</span></span>
+                        <span class="hidden sm:inline-block text-xs text-slate-400 ml-2 border-l border-slate-700 pl-2">Buxgalteriya tizimi</span>
+                    </div>
+                </div>
+
+                <!-- Harakatlar tugmalari -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <button onclick="exportToCSV()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 sm:px-4 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2 shadow-sm">
+                        <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                        <span class="hidden sm:inline">Excel (CSV) yuklash</span>
+                        <span class="sm:hidden">CSV</span>
+                    </button>
+                    <button onclick="openResetModal()" title="Namuna ma'lumotlarni tiklash" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 p-2 rounded-xl text-sm transition">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Xabarnoma (Toast Notification) -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center space-x-3 border border-slate-700">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+            <span id="toast-message" class="text-sm font-medium">Amaliyot bajarildi</span>
+        </div>
+    </div>
+
+    <!-- Asosiy Kontent -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <!-- 1. Moliyaviy Ko'rsatkichlar Kartochkalari (Dashboard Cards) -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Umumiy Kirim -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 hover:shadow-md transition relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-slate-500">Umumiy kirim (Daromad)</p>
+                        <h3 id="total-income" class="text-2xl sm:text-3xl font-bold text-slate-900 mt-2">0 so'm</h3>
+                    </div>
+                    <div class="bg-emerald-50 text-emerald-600 p-3 rounded-xl">
+                        <i class="fa-solid fa-arrow-trend-up text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center text-xs text-emerald-600 font-medium">
+                    <i class="fa-solid fa-circle-plus mr-1.5"></i>
+                    <span id="income-count">0 ta kirim operatsiyasi</span>
+                </div>
+            </div>
+
+            <!-- Umumiy Chiqim -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 hover:shadow-md transition relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-slate-500">Umumiy chiqim (Xarajat)</p>
+                        <h3 id="total-expense" class="text-2xl sm:text-3xl font-bold text-slate-900 mt-2">0 so'm</h3>
+                    </div>
+                    <div class="bg-rose-50 text-rose-600 p-3 rounded-xl">
+                        <i class="fa-solid fa-arrow-trend-down text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center text-xs text-rose-600 font-medium">
+                    <i class="fa-solid fa-circle-minus mr-1.5"></i>
+                    <span id="expense-count">0 ta chiqim operatsiyasi</span>
+                </div>
+            </div>
+
+            <!-- Sof Foyda (Balans) -->
+            <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 hover:shadow-lg transition relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-slate-400">Sof foyda (Joriy balans)</p>
+                        <h3 id="net-balance" class="text-2xl sm:text-3xl font-bold text-white mt-2">0 so'm</h3>
+                    </div>
+                    <div class="bg-slate-800 text-emerald-400 p-3 rounded-xl border border-slate-700">
+                        <i class="fa-solid fa-wallet text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center justify-between text-xs">
+                    <span class="text-slate-400">Moliyaviy holat:</span>
+                    <span id="balance-status" class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">Ijobiy</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Grafik va Yangi Tranzaksiya Qo'shish Formasi -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Chap tomon: Yangi Operatsiya Qo'shish Formasi (5 ustun) -->
+            <div class="lg:col-span-5 bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
+                <div class="flex items-center space-x-2 mb-6 pb-4 border-b border-slate-100">
+                    <div class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center">
+                        <i class="fa-solid fa-plus text-sm"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-900">Yangi operatsiya kiritish</h2>
+                </div>
+
+                <form id="transaction-form" class="space-y-4">
+                    <!-- Operatsiya turi (Radio tugmalar) -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Operatsiya turi</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="kirim" class="peer sr-only" checked>
+                                <div class="text-center py-2.5 px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-medium text-sm peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 transition flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-arrow-down text-emerald-500"></i>
+                                    <span>Kirim (+)</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="chiqim" class="peer sr-only">
+                                <div class="text-center py-2.5 px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-medium text-sm peer-checked:bg-rose-50 peer-checked:border-rose-500 peer-checked:text-rose-700 transition flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-arrow-up text-rose-500"></i>
+                                    <span>Chiqim (-)</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Sana va Kategoriya -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="date" class="block text-sm font-medium text-slate-700 mb-1">Sana</label>
+                            <input type="date" id="date" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition">
+                        </div>
+                        <div>
+                            <label for="category" class="block text-sm font-medium text-slate-700 mb-1">Kategoriya</label>
+                            <select id="category" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition">
+                                <option value="Sotuv">Sotuv</option>
+                                <option value="Xizmatlar">Xizmatlar</option>
+                                <option value="Ish haqi">Ish haqi</option>
+                                <option value="Ijara">Ijara</option>
+                                <option value="Soliqlar">Soliqlar</option>
+                                <option value="Kommunal">Kommunal</option>
+                                <option value="Boshqa">Boshqa</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Summa (UZS) -->
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-slate-700 mb-1">Summa (so'mda - UZS)</label>
+                        <div class="relative">
+                            <input type="number" id="amount" placeholder="Masalan: 2500000" min="1" step="any" required class="w-full pl-4 pr-14 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition">
+                            <span class="absolute right-4 top-2.5 text-xs font-bold text-slate-400">UZS</span>
+                        </div>
+                    </div>
+
+                    <!-- Izoh -->
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-slate-700 mb-1">Izoh / Tafsilot</label>
+                        <input type="text" id="description" placeholder="Masalan: Mijozdan shartnoma bo'yicha to'lov" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition">
+                    </div>
+
+                    <!-- Saqlash tugmasi -->
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 mt-2">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Hisobga qo'shish</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- O'ng tomon: Moliyaviy Dinamika Grafiki (7 ustun) -->
+            <div class="lg:col-span-7 bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Kirim va Chiqimlar Dinamikasi</h2>
+                        <p class="text-xs text-slate-500">Kategoriyalar va sanalar kesimida moliyaviy tahlil</p>
+                    </div>
+                    <div class="flex bg-slate-100 p-1 rounded-xl self-start">
+                        <button type="button" onclick="switchChartMode('date')" id="btn-chart-date" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition">Sanalar bo'yicha</button>
+                        <button type="button" onclick="switchChartMode('category')" id="btn-chart-cat" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">Kategoriyalar</button>
+                    </div>
+                </div>
+                
+                <!-- Grafik konteyneri -->
+                <div class="relative w-full h-72 sm:h-80">
+                    <canvas id="financeChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Tranzaksiyalar Jadvali va Filtrlash -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+            <!-- Jadval sarlavhasi va Filtrlar -->
+            <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Buxgalteriya yozuvlari jurnali</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Barcha kiritilgan kirim va chiqim operatsiyalari ro'yxati</p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <!-- Qidiruv maydoni -->
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                        <input type="text" id="search-input" placeholder="Izoh yoki kategoriya izlash..." class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition">
+                    </div>
+
+                    <!-- Tur bo'yicha filtr tugmalari -->
+                    <div class="flex bg-slate-100 p-1 rounded-xl">
+                        <button onclick="setFilter('all')" id="filter-all" class="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition">Barchasi</button>
+                        <button onclick="setFilter('kirim')" id="filter-kirim" class="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-emerald-700 transition">Kirim</button>
+                        <button onclick="setFilter('chiqim')" id="filter-chiqim" class="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-700 transition">Chiqim</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Jadval (Responsive wrapper) -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <th class="py-3.5 px-6">Sana</th>
+                            <th class="py-3.5 px-6">Kategoriya</th>
+                            <th class="py-3.5 px-6">Izoh</th>
+                            <th class="py-3.5 px-6">Turi</th>
+                            <th class="py-3.5 px-6 text-right">Summa (UZS)</th>
+                            <th class="py-3.5 px-6 text-center">Amal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-tbody" class="divide-y divide-slate-100 text-sm">
+                        <!-- JavaScript orqali to'ldiriladi -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bo'sh holat (Empty State) -->
+            <div id="empty-state" class="hidden py-12 px-4 text-center">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-folder-open text-2xl"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-800">Ma'lumotlar topilmadi</h3>
+                <p class="text-sm text-slate-500 mt-1">Qidiruv so'rovini o'zgartiring yoki yangi operatsiya qo'shing.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-5 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-500 gap-2">
+            <p>&copy; 2026 Hisobchi Pro. Barcha ma'lumotlar brauzeringiz xotirasida (LocalStorage) xavfsiz saqlanadi.</p>
+            <p class="font-medium text-slate-600">Valyuta: O'zbek so'mi (UZS)</p>
+        </div>
+    </footer>
+
+    <!-- O'chirishni tasdiqlash Modal oynasi (alert/confirm o'rniga) -->
+    <div id="delete-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl transform transition-all">
+            <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-4">
+                <i class="fa-solid fa-trash-can text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Yozuvni o'chirish</h3>
+            <p class="text-sm text-slate-500 mt-2">Haqiqatan ham ushbu buxgalteriya operatsiyasini o'chirmoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi.</p>
+            <div class="mt-6 flex space-x-3">
+                <button onclick="closeDeleteModal()" class="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition">Bekor qilish</button>
+                <button id="confirm-delete-btn" class="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm transition shadow-sm">O'chirish</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Namuna ma'lumotlarni tiklash Modal oynasi -->
+    <div id="reset-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-4">
+                <i class="fa-solid fa-rotate-right text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Boshlang'ich holatga qaytarish</h3>
+            <p class="text-sm text-slate-500 mt-2">Barcha joriy yozuvlar o'chirilib, dastlabki 5 ta namuna buxgalteriya yozuvlari qayta tiklanadi. Davom etasizmi?</p>
+            <div class="mt-6 flex space-x-3">
+                <button onclick="closeResetModal()" class="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition">Bekor qilish</button>
+                <button onclick="resetToDefaultData()" class="flex-1 py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition">Tiklash</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Dastlabki Holat va Namuna Ma'lumotlar ---
+        const STORAGE_KEY = 'hisobchi_pro_transactions_v1';
+        
+        // Bugungi va yaqin kunlar sanalarini olish yordamchisi
+        function getRelativeDate(daysOffset) {
+            const d = new Date();
+            d.setDate(d.getDate() + daysOffset);
+            return d.toISOString().split('T')[0];
+        }
+
+        const defaultTransactions = [
+            {
+                id: 'tr-101',
+                date: getRelativeDate(-6),
+                type: 'kirim',
+                category: 'Sotuv',
+                description: 'Mijozdan shartnoma #42 bo‘yicha oldindan to‘lov',
+                amount: 18500000
+            },
+            {
+                id: 'tr-102',
+                date: getRelativeDate(-5),
+                type: 'chiqim',
+                category: 'Ijara',
+                description: 'Ofis binosi uchun oylik ijara to‘lovi',
+                amount: 4500000
+            },
+            {
+                id: 'tr-103',
+                date: getRelativeDate(-3),
+                type: 'kirim',
+                category: 'Xizmatlar',
+                description: 'IT va konsalting xizmatlari uchun tushum',
+                amount: 9200000
+            },
+            {
+                id: 'tr-104',
+                date: getRelativeDate(-2),
+                type: 'chiqim',
+                category: 'Ish haqi',
+                description: 'Xodimlar oylik maoshi va avans to‘lovlari',
+                amount: 11000000
+            },
+            {
+                id: 'tr-105',
+                date: getRelativeDate(-1),
+                type: 'chiqim',
+                category: 'Soliqlar',
+                description: 'Aylanmadan olinadigan soliq va ijtimoiy to‘lovlar',
+                amount: 1850000
+            }
+        ];
+
+        let transactions = [];
+        let currentFilter = 'all';
+        let chartMode = 'date'; // 'date' yoki 'category'
+        let financeChartInstance = null;
+        let transactionIdToDelete = null;
+
+        // --- 2. Ma'lumotlarni Yuklash va Saqlash (LocalStorage) ---
+        function loadTransactions() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    transactions = JSON.parse(saved);
+                } else {
+                    transactions = [...defaultTransactions];
+                    saveTransactions();
+                }
+            } catch (error) {
+                console.error("LocalStorage o'qishda xatolik:", error);
+                transactions = [...defaultTransactions];
+            }
+        }
+
+        function saveTransactions() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            } catch (error) {
+                console.error("LocalStorage saqlashda xatolik:", error);
+                showToast("Ma'lumotni saqlashda xatolik yuz berdi", "error");
+            }
+        }
+
+        // --- 3. Valyuta va Sana Formatlash ---
+        function formatUZS(amount) {
+            return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
+        }
+
+        function formatDateUZ(dateStr) {
+            if (!dateStr) return '';
+            const [year, month, day] = dateStr.split('-');
+            return `${day}.${month}.${year}`;
+        }
+
+        // --- 4. UI Yangilash Funksiyalari ---
+        function updateDashboard() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let incomeCount = 0;
+            let expenseCount = 0;
+
+            transactions.forEach(tr => {
+                if (tr.type === 'kirim') {
+                    totalIncome += Number(tr.amount);
+                    incomeCount++;
+                } else {
+                    totalExpense += Number(tr.amount);
+                    expenseCount++;
+                }
+            });
+
+            const netBalance = totalIncome - totalExpense;
+
+            document.getElementById('total-income').textContent = formatUZS(totalIncome);
+            document.getElementById('total-expense').textContent = formatUZS(totalExpense);
+            document.getElementById('net-balance').textContent = formatUZS(netBalance);
+
+            document.getElementById('income-count').textContent = `${incomeCount} ta kirim operatsiyasi`;
+            document.getElementById('expense-count').textContent = `${expenseCount} ta chiqim operatsiyasi`;
+
+            const statusBadge = document.getElementById('balance-status');
+            if (netBalance > 0) {
+                statusBadge.textContent = "Ijobiy (Foyda)";
+                statusBadge.className = "px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium";
+            } else if (netBalance < 0) {
+                statusBadge.textContent = "Salbiy (Zarar)";
+                statusBadge.className = "px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-medium";
+            } else {
+                statusBadge.textContent = "Muvozanatda";
+                statusBadge.className = "px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 font-medium";
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('transactions-tbody');
+            const emptyState = document.getElementById('empty-state');
+            const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+
+            // Filtrlash va saralash (eng yangi sanalar tepada)
+            const filtered = transactions
+                .filter(tr => {
+                    const matchesType = currentFilter === 'all' || tr.type === currentFilter;
+                    const matchesSearch = 
+                        tr.description.toLowerCase().includes(searchQuery) ||
+                        tr.category.toLowerCase().includes(searchQuery) ||
+                        tr.amount.toString().includes(searchQuery);
+                    return matchesType && matchesSearch;
+                })
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filtered.forEach(tr => {
+                const isIncome = tr.type === 'kirim';
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50/90 transition group';
+
+                row.innerHTML = `
+                    <td class="py-4 px-6 whitespace-nowrap text-slate-600 font-medium">
+                        ${formatDateUZ(tr.date)}
+                    </td>
+                    <td class="py-4 px-6 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-700">
+                            ${escapeHTML(tr.category)}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6 text-slate-800 max-w-xs truncate" title="${escapeHTML(tr.description)}">
+                        ${escapeHTML(tr.description)}
+                    </td>
+                    <td class="py-4 px-6 whitespace-nowrap">
+                        ${isIncome 
+                            ? '<span class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>Kirim</span></span>'
+                            : '<span class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span><span>Chiqim</span></span>'
+                        }
+                    </td>
+                    <td class="py-4 px-6 whitespace-nowrap text-right font-bold ${isIncome ? 'text-emerald-600' : 'text-rose-600'}">
+                        ${isIncome ? '+' : '-'}${formatUZS(tr.amount)}
+                    </td>
+                    <td class="py-4 px-6 whitespace-nowrap text-center">
+                        <button onclick="openDeleteModal('${tr.id}')" title="O'chirish" class="text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // --- 5. Chart.js Grafikni Chizish ---
+        function renderChart() {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            
+            if (financeChartInstance) {
+                financeChartInstance.destroy();
+            }
+
+            if (chartMode === 'date') {
+                // Sanalar bo'yicha guruhlash
+                const dateMap = {};
+                const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                sorted.forEach(tr => {
+                    const label = formatDateUZ(tr.date);
+                    if (!dateMap[label]) {
+                        dateMap[label] = { kirim: 0, chiqim: 0 };
+                    }
+                    if (tr.type === 'kirim') {
+                        dateMap[label].kirim += Number(tr.amount);
+                    } else {
+                        dateMap[label].chiqim += Number(tr.amount);
+                    }
+                });
+
+                const labels = Object.keys(dateMap);
+                const incomeData = labels.map(l => dateMap[l].kirim);
+                const expenseData = labels.map(l => dateMap[l].chiqim);
+
+                financeChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels.length ? labels : ['Maʼlumot yoʻq'],
+                        datasets: [
+                            {
+                                label: 'Kirim (UZS)',
+                                data: incomeData.length ? incomeData : [0],
+                                backgroundColor: '#10b981',
+                                borderRadius: 6,
+                                barPercentage: 0.6,
+                            },
+                            {
+                                label: 'Chiqim (UZS)',
+                                data: expenseData.length ? expenseData : [0],
+                                backgroundColor: '#f43f5e',
+                                borderRadius: 6,
+                                barPercentage: 0.6,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${formatUZS(context.raw)}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#f1f5f9' },
+                                ticks: {
+                                    font: { family: 'Inter', size: 11 },
+                                    callback: function(value) {
+                                        if (value >= 1000000) return (value / 1000000) + ' mln';
+                                        if (value >= 1000) return (value / 1000) + ' ming';
+                                        return value;
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { family: 'Inter', size: 11 } }
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Kategoriyalar bo'yicha umumiy aylanma
+                const catMap = {};
+                transactions.forEach(tr => {
+                    if (!catMap[tr.category]) catMap[tr.category] = 0;
+                    catMap[tr.category] += Number(tr.amount);
+                });
+
+                const labels = Object.keys(catMap);
+                const values = Object.values(catMap);
+                const colors = ['#0f172a', '#10b981', '#3b82f6', '#f59e0b', '#f43f5e', '#8b5cf6', '#64748b'];
+
+                financeChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels.length ? labels : ['Maʼlumot yoʻq'],
+                        datasets: [{
+                            data: values.length ? values : [1],
+                            backgroundColor: labels.length ? colors.slice(0, labels.length) : ['#e2e8f0'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '65%',
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, padding: 15 }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        if (!labels.length) return 'Maʼlumot mavjud emas';
+                                        return `${context.label}: ${formatUZS(context.raw)}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function switchChartMode(mode) {
+            chartMode = mode;
+            const btnDate = document.getElementById('btn-chart-date');
+            const btnCat = document.getElementById('btn-chart-cat');
+
+            if (mode === 'date') {
+                btnDate.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition";
+                btnCat.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition";
+            } else {
+                btnCat.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition";
+                btnDate.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition";
+            }
+            renderChart();
+        }
+
+        // --- 6. Yangi Tranzaksiya Qo'shish ---
+        document.getElementById('transaction-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const type = document.querySelector('input[name="type"]:checked').value;
+            const date = document.getElementById('date').value;
+            const category = document.getElementById('category').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const description = document.getElementById('description').value.trim();
+
+            if (!date || !category || isNaN(amount) || amount <= 0 || !description) {
+                showToast("Iltimos, barcha maydonlarni to'g'ri to'ldiring!", "error");
+                return;
+            }
+
+            const newTransaction = {
+                id: 'tr-' + Date.now(),
+                date,
+                type,
+                category,
+                description,
+                amount
+            };
+
+            transactions.unshift(newTransaction);
+            saveTransactions();
+            refreshAll();
+
+            // Formani tozalash (sanani bugungi kunda qoldirish)
+            document.getElementById('amount').value = '';
+            document.getElementById('description').value = '';
+            
+            showToast(type === 'kirim' ? "Kirim muvaffaqiyatli qo'shildi!" : "Chiqim muvaffaqiyatli qo'shildi!");
+        });
+
+        // --- 7. Filtrlash va Qidirish ---
+        function setFilter(filterType) {
+            currentFilter = filterType;
+            
+            ['all', 'kirim', 'chiqim'].forEach(type => {
+                const btn = document.getElementById(`filter-${type}`);
+                if (type === filterType) {
+                    btn.className = "flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition";
+                } else {
+                    btn.className = "flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition";
+                }
+            });
+
+            renderTable();
+        }
+
+        document.getElementById('search-input').addEventListener('input', renderTable);
+
+        // --- 8. O'chirish va Tiklash Modallari ---
+        function openDeleteModal(id) {
+            transactionIdToDelete = id;
+            document.getElementById('delete-modal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            transactionIdToDelete = null;
+            document.getElementById('delete-modal').classList.add('hidden');
+        }
+
+        document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+            if (transactionIdToDelete) {
+                transactions = transactions.filter(tr => tr.id !== transactionIdToDelete);
+                saveTransactions();
+                refreshAll();
+                closeDeleteModal();
+                showToast("Yozuv o'chirildi");
+            }
+        });
+
+        function openResetModal() {
+            document.getElementById('reset-modal').classList.remove('hidden');
+        }
+
+        function closeResetModal() {
+            document.getElementById('reset-modal').classList.add('hidden');
+        }
+
+        function resetToDefaultData() {
+            transactions = [...defaultTransactions];
+            saveTransactions();
+            refreshAll();
+            closeResetModal();
+            showToast("Namuna ma'lumotlar qayta tiklandi");
+        }
+
+        // --- 9. Excel (CSV) Formatida Yuklab Olish ---
+        function exportToCSV() {
+            if (transactions.length === 0) {
+                showToast("Eksport qilish uchun ma'lumot mavjud emas!", "error");
+                return;
+            }
+
+            // UTF-8 BOM qo'shish (Excel kirill/o'zbek harflarini to'g'ri o'qishi uchun)
+            let csvContent = "\uFEFF";
+            csvContent += "ID;Sana;Operatsiya turi;Kategoriya;Izoh;Summa (UZS)\n";
+
+            const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sorted.forEach(tr => {
+                const typeLabel = tr.type === 'kirim' ? 'Kirim' : 'Chiqim';
+                const cleanDesc = tr.description.replace(/;/g, ',').replace(/\n/g, ' ');
+                const signedAmount = tr.type === 'kirim' ? tr.amount : -tr.amount;
+                
+                csvContent += `${tr.id};${formatDateUZ(tr.date)};${typeLabel};${tr.category};"${cleanDesc}";${signedAmount}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            
+            const today = new Date().toISOString().split('T')[0];
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Buxgalteriya_Hisoboti_${today}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showToast("Excel (CSV) fayli yuklab olindi!");
+        }
+
+        // --- 10. Yordamchi Funksiyalar ---
+        function showToast(message, type = "success") {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.textContent = message;
+            if (type === "error") {
+                toastIcon.className = "fa-solid fa-circle-exclamation text-rose-400 text-lg";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-check text-emerald-400 text-lg";
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function refreshAll() {
+            updateDashboard();
+            renderTable();
+            renderChart();
+        }
+
+        // --- Dasturni Ishga Tushirish ---
+        window.onload = function() {
+            // Sana maydoniga bugungi sanani avtomatik qo'yish
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            
+            loadTransactions();
+            refreshAll();
+        };
+    </script>
+</body>
+</html>
